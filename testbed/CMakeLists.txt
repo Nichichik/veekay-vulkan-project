@@ -12,7 +12,7 @@ find_package(Vulkan REQUIRED)
 target_link_libraries(${PROJECT_NAME} veekay Vulkan::Headers)
 
 # Compile shaders
-find_program(GLSLC_FOUND glslc)
+find_program(GLSLC_FOUND glslangValidator)
 if(GLSLC_FOUND)
 	set(_SHADER_BINARIES)
 
@@ -23,8 +23,7 @@ if(GLSLC_FOUND)
 
 		add_custom_command(
 			OUTPUT ${SHADER_BINARY_PATH}
-			COMMAND glslc ${SHADER_SOURCE} -o ${SHADER_BINARY_PATH}
-			DEPENDS ${SHADER_SOURCE}
+				COMMAND glslangValidator -V ${SHADER_SOURCE} -o ${SHADER_BINARY_PATH}				DEPENDS ${SHADER_SOURCE}
 			COMMENT "Compiling ${SHADER_FILE} shader"
 		)
 

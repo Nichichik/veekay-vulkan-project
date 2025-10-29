@@ -2,7 +2,9 @@
 
 // NOTE: Attributes must match the declaration of VkVertexInputAttribute array
 layout (location = 0) in vec3 v_position;
-// layout (location = 1) in type name;
+layout (location = 1) in vec3 v_color;
+
+layout (location = 0) out vec3 f_color;
 
 // NOTE: Must match declaration order of a C struct
 layout (push_constant, std430) uniform ShaderConstants {
@@ -18,4 +20,5 @@ void main() {
 
 	// NOTE: Write our projected point out
 	gl_Position = projected;
+	f_color = v_color;
 }
