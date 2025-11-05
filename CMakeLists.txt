@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 include(FetchContent)
+set(VULKAN_SDK "${CMAKE_CURRENT_SOURCE_DIR}/vulkan-sdk/x86_64" CACHE PATH "Path to Vulkan SDK")
+message(STATUS "Using local Vulkan SDK from: ${VULKAN_SDK}")
+
+# --- САМЫЕ ВАЖНЫЕ СТРОКИ ---
+# Устанавливаем переменные-подсказки для find_package(Vulkan)
+set(ENV{VULKAN_SDK} ${VULKAN_SDK}) # Для некоторых версий CMake
+set(Vulkan_INCLUDE_DIRS ${VULKAN_SDK}/include)
+set(Vulkan_LIBRARIES ${VULKAN_SDK}/lib/libvulkan.so)
 
 project(veekay LANGUAGES C CXX)
 
