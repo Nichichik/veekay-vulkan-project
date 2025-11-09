@@ -1,18 +1,15 @@
-#include "veekay/input.hpp"
 #include <cstdint>
 #include <climits>
+#include <cstring>
 #include <vector>
 #include <iostream>
 #include <fstream>
-
-#define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
 
 #include <veekay/veekay.hpp>
 
-#include <imgui.h>
 #include <vulkan/vulkan_core.h>
-
+#include <imgui.h>
 #include <lodepng.h>
 
 namespace {
@@ -597,6 +594,7 @@ namespace {
                 return;
             }
 
+<<<<<<< HEAD
             VkGraphicsPipelineCreateInfo info{
                     .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
                     .stageCount = 2,
@@ -1107,7 +1105,19 @@ namespace {
             uniforms.use_texture = model.use_texture ? 1.0f : 0.0f;
             uniforms.texture_index = model.texture_index;
 
+            *(SceneUniforms*)scene_uniforms_buffer->mapped_region = scene_uniforms;
+            *(PointLightsSSBO*)point_lights_ssbo->mapped_region = point_lights_data; // <- Важно! Не забываем про ваш буфер со светом
 
+            const size_t alignment =
+                    veekay::graphics::Buffer::structureAlignment(sizeof(ModelUniforms));
+
+            for (size_t i = 0, n = model_uniforms.size(); i < n; ++i) {
+                const ModelUniforms& uniforms = model_uniforms[i];
+
+                char* const pointer = static_cast<char*>(model_uniforms_buffer->mapped_region) + i * alignment;
+                *reinterpret_cast<ModelUniforms*>(pointer) = uniforms;
+            }
+        } // <- Эта закрывающая скобка, вероятно, относится к функции update()
         }
 
         *(SceneUniforms*)scene_uniforms_buffer->mapped_region = scene_uniforms;
@@ -1118,75 +1128,87 @@ namespace {
     }
 
 
-    void render(VkCommandBuffer cmd, VkFramebuffer framebuffer) {
-        vkResetCommandBuffer(cmd, 0);
+void render(VkCommandBuffer cmd, VkFramebuffer framebuffer) {
+    vkResetCommandBuffer(cmd, 0);
 
-        { // NOTE: Start recording rendering commands
-            VkCommandBufferBeginInfo info{
-                    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-            };
-
-            vkBeginCommandBuffer(cmd, &info);
-        }
-
-        { // NOTE: Use current swapchain framebuffer and clear it
-            VkClearValue clear_color{.color = {{0.1f, 0.1f, 0.1f, 1.0f}}};
-            VkClearValue clear_depth{.depthStencil = {1.0f, 0}};
-
-            VkClearValue clear_values[] = {clear_color, clear_depth};
-
-            VkRenderPassBeginInfo info{
-                    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                    .renderPass = veekay::app.vk_render_pass,
-                    .framebuffer = framebuffer,
-                    .renderArea = {
-                            .extent = {
-                                    veekay::app.window_width,
-                                    veekay::app.window_height
-                            },
-                    },
-                    .clearValueCount = 2,
-                    .pClearValues = clear_values,
-            };
-
-            vkCmdBeginRenderPass(cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
-        }
-
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        VkDeviceSize zero_offset = 0;
-
-        uint32_t initial_dynamic_offset = 0;
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout,
-                                0, 1, &descriptor_set, 1, &initial_dynamic_offset);
-
-        VkBuffer current_vertex_buffer = VK_NULL_HANDLE;
-        VkBuffer current_index_buffer = VK_NULL_HANDLE;
-
-        for (size_t i = 0, n = models.size(); i < n; ++i) {
-            const Model& model = models[i];
-            const Mesh& mesh = model.mesh;
-
-            if (current_vertex_buffer != mesh.vertex_buffer->buffer) {
-                current_vertex_buffer = mesh.vertex_buffer->buffer;
-                vkCmdBindVertexBuffers(cmd, 0, 1, &current_vertex_buffer, &zero_offset);
-            }
-
-            if (current_index_buffer != mesh.index_buffer->buffer) {
-                current_index_buffer = mesh.index_buffer->buffer;
-                vkCmdBindIndexBuffer(cmd, current_index_buffer, zero_offset, VK_INDEX_TYPE_UINT32);
-            }
-
-            uint32_t dynamic_offset = i * sizeof(ModelUniforms);
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout,
-                                    0, 1, &descriptor_set, 1, &dynamic_offset);
-
-            vkCmdDrawIndexed(cmd, mesh.indices, 1, 0, 0, 0);
-        }
-
-        vkCmdEndRenderPass(cmd);
-        vkEndCommandBuffer(cmd);
+    { // NOTE: Start recording rendering commands
+        VkCommandBufferBeginInfo info{
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        };
+        vkBeginCommandBuffer(cmd, &info);
     }
+
+    { // NOTE: Use current swapchain framebuffer and clear it
+        VkClearValue clear_color{.color = {{0.1f, 0.1f, 0.1f, 1.0f}}};
+        VkClearValue clear_depth{.depthStencil = {1.0f, 0}};
+        VkClearValue clear_values[] = {clear_color, clear_depth};
+
+        VkRenderPassBeginInfo info{
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .renderPass = veekay::app.vk_render_pass,
+                .framebuffer = framebuffer,
+                .renderArea = {
+                        .extent = {
+                                veekay::app.window_width,
+                                veekay::app.window_height
+                        },
+                },
+                .clearValueCount = 2,
+                .pClearValues = clear_values,
+        };
+        vkCmdBeginRenderPass(cmd, &info, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    // --- НАЧАЛО ИСПРАВЛЕННОЙ ЛОГИКИ ---
+
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    VkDeviceSize zero_offset = 0;
+
+    // 1. Получаем правильное выравнивание один раз перед циклом
+    const size_t model_uniforms_alignment =
+            veekay::graphics::Buffer::structureAlignment(sizeof(ModelUniforms));
+
+    // 2. Биндим общие дескрипторы (SceneUniforms, PointLightsSSBO) один раз
+    uint32_t initial_dynamic_offset = 0;
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout,
+                            0, 1, &descriptor_set, 1, &initial_dynamic_offset);
+
+    // 3. Инициализируем переменные для кеширования буферов
+    VkBuffer current_vertex_buffer = VK_NULL_HANDLE;
+    VkBuffer current_index_buffer = VK_NULL_HANDLE;
+
+    // 4. Основной цикл по всем моделям
+    for (size_t i = 0, n = models.size(); i < n; ++i) {
+        const Model& model = models[i];
+        const Mesh& mesh = model.mesh;
+
+        // Ваша логика кеширования - оставляем, она хороша
+        if (current_vertex_buffer != mesh.vertex_buffer->buffer) {
+            current_vertex_buffer = mesh.vertex_buffer->buffer;
+            vkCmdBindVertexBuffers(cmd, 0, 1, &current_vertex_buffer, &zero_offset);
+        }
+
+        if (current_index_buffer != mesh.index_buffer->buffer) {
+            current_index_buffer = mesh.index_buffer->buffer;
+            vkCmdBindIndexBuffer(cmd, current_index_buffer, zero_offset, VK_INDEX_TYPE_UINT32);
+        }
+
+        // 5. Вычисляем и биндим динамический offset для КАЖДОЙ модели
+        //    Используем ПРАВИЛЬНЫЙ расчет с alignment из версии upstream/master
+        uint32_t dynamic_offset = i * model_uniforms_alignment;
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout,
+                                0, 1, &descriptor_set, 1, &dynamic_offset);
+
+        // Рисуем модель
+        vkCmdDrawIndexed(cmd, mesh.indices, 1, 0, 0, 0);
+    }
+
+    // --- КОНЕЦ ИСПРАВЛЕННОЙ ЛОГИКИ ---
+
+    vkCmdEndRenderPass(cmd);
+    vkEndCommandBuffer(cmd);
+}
 
 } // namespace
 
